@@ -1,65 +1,74 @@
 import streamlit as st
 import pandas as pd
 
-# 這是修正後的 Google Sheets CSV 下載網址
-# 請直接複製這一行替換掉原本的 sheet_url
-sheet_url = "https://docs.google.com/spreadsheets/d/1vWKvVc9ySyWY0au2gGTdnkNjZ3wsqAIRk_vD7wERbE/gviz/tq?tqx=out:csv"
+# --- 1. 設定頁面 ---
+st.set_page_config(page_title="中國歷史朝代時間軸", layout="wide")
 
-st.set_page_config(page_title="我的歷史AI人物誌", layout="wide")
+# --- 2. 內建資料庫 (直接寫在程式裡，最穩定！) ---
+# 之後你想新增人物，只要模仿格式加在下面的清單裡即可
+if 'history_data' not in st.session_state:
+    st.session_state.history_data = pd.DataFrame([
+        {"name": "孔子", "dynasty": "東周", "year": -551, "type": "思想家", "note": "至聖先師，儒家創始人"},
+        {"name": "秦始皇", "dynasty": "秦朝", "year": -259, "type": "君主", "note": "統一六國，築長城"},
+        {"name": "漢武帝", "dynasty": "西漢", "year": -156, "type": "君主", "note": "罷黜百家，獨尊儒術"},
+        {"name": "曹操", "dynasty": "三國", "year": 155, "type": "君主", "note": "魏國奠基者，一代梟雄"},
+        {"name": "關羽", "dynasty": "三國", "year": 160, "type": "武將", "note": "武聖，義薄雲天"},
+        {"name": "李白", "dynasty": "唐朝", "year": 701, "type": "詩人", "note": "詩仙，豪放不羈"},
+        {"name": "朱元璋", "dynasty": "明朝", "year": 1328, "type": "君主", "note": "明朝開國皇帝"},
+        {"name": "康熙", "dynasty": "清朝", "year": 1654, "type": "君主", "note": "開啟康雍乾盛世"}
+    ])
 
-# 設定標題
+df = st.session_state.history_data
+
+# --- 3. 側邊欄：新增功能與篩選 ---
+st.sidebar.header("🛠️ 動作選單")
+
+# 新增人物的功能
+with st.sidebar.expander("➕ 新增歷史人物"):
+    new_name = st.text_input("姓名")
+    new_dynasty = st.selectbox("朝代", ["東周", "秦朝", "西漢", "東漢", "三國", "晉朝", "隋朝", "唐朝", "宋朝", "元朝", "明朝", "清朝"])
+    new_year = st.number_input("年份 (西元前請輸入負數)", value=2026)
+    new_type = st.text_input("人物類型 (如：詩人、君主)")
+    new_note = st.text_area("筆記")
+    
+    if st.button("確認新增"):
+        new_row = {"name": new_name, "dynasty": new_dynasty, "year": new_year, "type": new_type, "note": new_note}
+        st.session_state.history_data = pd.concat([st.session_state.history_data, pd.DataFrame([new_row])], ignore_index=True)
+        st.rerun()
+
+selected_dynasty = st.sidebar.selectbox("🔍 切換朝代檢視", ["全部總覽"] + list(df['dynasty'].unique()))
+
+# --- 4. 主要畫面展示 ---
 st.title("📜 中國歷史朝代時間軸程式")
-st.markdown("---")
 
-# 讀取資料邏輯
-try:
-    # 讀取雲端試算表
-    df = pd.read_csv(sheet_url)
+if selected_dynasty == "全部總覽":
+    st.subheader("我的歷史學習封面")
+    # 這裡放一個簡單的模擬時間軸圖形
+    st.info("💡 提示：點擊左側選單可以切換朝代，並看到該朝代的火柴人！")
     
-    # 側邊欄：功能選單
-    st.sidebar.header("🔍 歷史導覽")
+    # 用進度條或簡單列表模擬時間軸順序
+    sorted_df = df.sort_values(by="year")
+    st.write("### ⏳ 歷史人物時間軸線")
+    for index, row in sorted_df.iterrows():
+        st.write(f"{row['year']}年 ➔ **{row['name']}** ({row['dynasty']})")
+
+else:
+    st.subheader(f"📍 {selected_dynasty} 的歷史人物")
+    filtered_df = df[df['dynasty'] == selected_dynasty]
     
-    # 檢查資料表是否有朝代這欄
-    if not df.empty and 'dynasty' in df.columns:
-        dynasty_options = ["全部總覽"] + list(df['dynasty'].unique())
+    if not filtered_df.empty:
+        cols = st.columns(len(filtered_df))
+        for i, row in enumerate(filtered_df.itertuples()):
+            with cols[i]:
+                st.markdown("### 🚶‍♂️")
+                st.subheader(row.name)
+                st.write(f"**身分：** {row.type}")
+                st.caption(f"西元 {row.year} 年")
+                if pd.notna(row.note):
+                    st.info(row.note)
     else:
-        dynasty_options = ["全部總覽"]
+        st.write("目前這個朝代還沒有認識的人物喔！")
 
-    selected = st.sidebar.selectbox("請選擇想查看的朝代", dynasty_options)
-    
-    # 畫面顯示
-    if selected == "全部總覽":
-        st.subheader("我的學習進度總覽")
-        if df.empty:
-            st.warning("目前資料庫是空的，請先在 Google 試算表中填入人物資料。")
-        else:
-            # 顯示原始資料表
-            st.dataframe(df, use_container_width=True)
-            st.write(f"目前已記錄 {len(df)} 位歷史人物。")
-    else:
-        st.subheader(f"📍 {selected} 的歷史人物")
-        # 篩選出該朝代的人物
-        filtered_df = df[df['dynasty'] == selected]
-        
-        if not filtered_df.empty:
-            # 使用橫向欄位顯示火柴人（最多4欄）
-            cols = st.columns(min(len(filtered_df), 4)) 
-            for i, row in enumerate(filtered_df.itertuples()):
-                with cols[i % 4]:
-                    st.container()
-                    st.markdown(f"### 🚶‍♂️ {row.name}")
-                    st.write(f"**身分：** {row.type}")
-                    # 顯示年份（如果有這欄）
-                    if 'year' in df.columns:
-                        st.caption(f"年份：西元 {row.year}")
-                    # 顯示備註（如果有這欄）
-                    if 'note' in df.columns and pd.notna(row.note):
-                        st.info(row.note)
-                    st.markdown("---")
-        else:
-            st.write("這個朝代暫時還沒有記錄。")
-
-except Exception as e:
-    st.error("讀取失敗！")
-    st.info("請檢查：1. Google 試算表是否已開啟「知道連結的任何人均可查看」。 2. 欄位名稱是否包含 name, dynasty, type。")
-    st.write(f"系統錯誤訊息：{e}")
+# --- 5. 資料檢視 (底部) ---
+with st.expander("查看原始資料表"):
+    st.table(df)
