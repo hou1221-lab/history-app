@@ -2,7 +2,8 @@ import streamlit as st
 import pandas as pd
 
 # 這是修正後的 Google Sheets CSV 下載網址
-sheet_url = "https://docs.google.com/spreadsheets/d/1vWKvVc9ySyWY0au2gGTdnkNjZ3wsqAIRk_vD7wERbE/export?format=csv"
+# 請直接複製這一行替換掉原本的 sheet_url
+sheet_url = "https://docs.google.com/spreadsheets/d/1vWKvVc9ySyWY0au2gGTdnkNjZ3wsqAIRk_vD7wERbE/gviz/tq?tqx=out:csv"
 
 st.set_page_config(page_title="我的歷史AI人物誌", layout="wide")
 
